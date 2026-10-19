@@ -1,0 +1,22 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      { "matcher": "Write|Edit|MultiEdit|NotebookEdit",
+        "hooks": [{ "type": "command", "command": "python3 $HOME/.claude/hooks/main-edit-guard.py" }] },
+      { "matcher": "Bash|mcp__serena__.*|mcp__obsidian__.*",
+        "hooks": [{ "type": "command", "command": "python3 $HOME/.claude/hooks/main-edit-guard.py" }] },
+      { "matcher": "Bash",
+        "hooks": [{ "type": "command", "command": "python3 $HOME/.claude/hooks/destructive_git_guard.py" }] }
+    ],
+    "PostToolUse": [
+      { "matcher": "Bash",
+        "hooks": [{ "type": "command", "command": "python3 $HOME/.claude/hooks/offload-large-output.py" }] }
+    ],
+    "UserPromptSubmit": [
+      { "hooks": [{ "type": "command", "command": "python3 $HOME/.claude/hooks/report-skeleton-reminder.py" }] }
+    ],
+    "Stop": [
+      { "hooks": [{ "type": "command", "command": "bash $HOME/.claude/hooks/session-journal-capture.sh" }] }
+    ]
+  }
+}

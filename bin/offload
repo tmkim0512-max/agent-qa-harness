@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+# offload — stash bulky output to a ref file, return a compact stub.
+# Full text lives in ~/.claude/refs/<id>.md; only stub + id stay in context.
+# Retrieve with: offload --get <id>
+REFS="${CLAUDE_REFS_DIR:-$HOME/.claude/refs}"
+HEAD=20
+mkdir -p "$REFS"
+
+usage() { echo "usage: offload [--head N] (--file PATH | --stdin | -- CMD...) | offload --get ID | offload --list" >&2; exit 2; }
+
+case "${1:-}" in
+  --get)  [ -n "${2:-}" ] || usage; f="$REFS/$2.md"; [ -f "$f" ] || { echo "no ref: $2" >&2; exit 1; }; cat "$f"; exit 0;;
+  --list) ls "$REFS"/*.md 2>/dev/null; exit 0;;
+esac
+
+[ "${1:-}" = "--head" ] && { HEAD="${2:?}"; shift 2; }
+
+tmp="$(mktemp)"
+trap 'rm -f "$tmp"' EXIT
+
+case "${1:-}" in
+  --file) [ -n "${2:-}" ] || usage; cat "$2" > "$tmp"; src="file:$2";;
+  --stdin) cat > "$tmp"; src="stdin";;
+  --) shift; [ "$#" -gt 0 ] || usage; src="cmd:$*"; "$@" > "$tmp" 2>&1 || true;;
+  *) usage;;
+esac
+
+id="$(shasum "$tmp" | cut -c1-8)"
+ref="$REFS/$id.md"
+[ -f "$ref" ] || cp "$tmp" "$ref"
+lines=$(wc -l < "$ref" | tr -d ' ')
+bytes=$(wc -c < "$ref" | tr -d ' ')
+
+printf '[ref:%s] %s · %s lines · %s bytes\n--- head(%s) ---\n' "$id" "$src" "$lines" "$bytes" "$HEAD"
+head -n "$HEAD" "$ref" || true
+printf -- '--- %s more · full: offload --get %s ---\n' "$((lines>HEAD ? lines-HEAD : 0))" "$id"
